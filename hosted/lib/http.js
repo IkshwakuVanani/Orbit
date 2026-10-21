@@ -1,0 +1,8 @@
+export function identity(req){const id=req.headers.get('oai-authenticated-user-id');if(!id)throw Object.assign(new Error('Sign in with ChatGPT to continue.'),{status:401});const email=req.headers.get('oai-authenticated-user-email')||'';let name=email.split('@')[0]||'Your workspace';const raw=req.headers.get('oai-authenticated-user-full-name');if(raw){try{name=decodeURIComponent(raw);}catch{}}return {id,name,email,hosted:true};}
+export const error=(status,message)=>{throw Object.assign(new Error(message),{status});};
+export function json(value,status=200){return Response.json(value,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});}
+export async function body(req){if(!req.headers.get('content-type')?.startsWith('application/json'))error(415,'Send JSON data.');if(req.headers.get('origin')&&req.headers.get('origin')!==new URL(req.url).origin)error(403,'Origin not allowed.');const text=await req.text();if(text.length>32768)error(413,'Request is too large.');try{return JSON.parse(text);}catch{error(400,'Invalid JSON.');}}
+export function wrap(fn){return async(req,db)=>{try{if(!db)error(503,'Database is not available.');return await fn(req,db);}catch(e){if(e.status)return json({error:e.message},e.status);console.error('API request failed',e.name);return json({error:'Something went wrong. Please try again.'},500);}};}
+export function sql(db,query,args=[]){return db.prepare(query).bind(...args);}
+export async function rows(db,query,args=[]){return (await sql(db,query,args).all()).results;}
+export const text=(value,max,required=true)=>typeof value==='string'&&value.length<=max&&(!required||!!value.trim());

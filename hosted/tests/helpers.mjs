@@ -1,0 +1,6 @@
+import {DatabaseSync} from 'node:sqlite';
+import {readFileSync,readdirSync} from 'node:fs';
+export function testDb(){const db=new DatabaseSync(':memory:');db.exec('PRAGMA foreign_keys=ON');for(const file of readdirSync(new URL('../drizzle/',import.meta.url)).filter(f=>f.endsWith('.sql')).sort())db.exec(readFileSync(new URL('../drizzle/'+file,import.meta.url),'utf8'));
+ const statement=(q,args=[])=>({bind(...a){return statement(q,a)},async all(){return {results:db.prepare(q).all(...args)}},async run(){const r=db.prepare(q).run(...args);return {meta:{last_row_id:Number(r.lastInsertRowid),changes:Number(r.changes)}}}});
+ return {prepare:statement,close:()=>db.close(),async batch(list){db.exec('BEGIN IMMEDIATE');try{const results=[];for(const s of list)results.push(await s.run());db.exec('COMMIT');return results}catch(e){db.exec('ROLLBACK');throw e;}}};}
+export function request(path,method='GET',data,owner='alice',origin){const headers={'oai-authenticated-user-id':owner,'oai-authenticated-user-email':owner+'@example.test'};if(data!==undefined)headers['content-type']='application/json';if(origin)headers.origin=origin;return new Request('https://app.example/api'+path,{method,headers,body:data===undefined?undefined:JSON.stringify(data)});}

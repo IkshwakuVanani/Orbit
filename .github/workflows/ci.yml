@@ -1,0 +1,31 @@
+name: Orbit CI
+on: [push, pull_request]
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        driver: [sqlite, mysql]
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: test
+          MYSQL_DATABASE: orbit_test
+        ports: ['3306:3306']
+        options: --health-cmd="mysqladmin ping -ptest" --health-interval=10s --health-timeout=5s --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm test
+        env:
+          DB_DRIVER: ${{ matrix.driver }}
+          DB_HOST: 127.0.0.1
+          DB_USER: root
+          DB_PASS: test
+          DB_NAME: orbit_test
+      - run: npm run build

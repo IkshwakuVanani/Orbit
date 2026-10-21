@@ -1,0 +1,30 @@
+services:
+  app:
+    build: .
+    ports: ['4000:4000']
+    environment:
+      DB_DRIVER: mysql
+      DB_HOST: db
+      DB_USER: orbit
+      DB_PASS: ${DB_PASS:?Set DB_PASS in .env}
+      DB_NAME: task_organizer_db
+      APP_ORIGIN: ${APP_ORIGIN:-http://localhost:4000}
+      NODE_ENV: development
+    depends_on:
+      db:
+        condition: service_healthy
+  db:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: task_organizer_db
+      MYSQL_USER: orbit
+      MYSQL_PASSWORD: ${DB_PASS:?Set DB_PASS in .env}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASS:?Set DB_ROOT_PASS in .env}
+    volumes: ['mysql-data:/var/lib/mysql']
+    healthcheck:
+      test: ['CMD-SHELL', 'mysqladmin ping -h localhost -p"$$MYSQL_ROOT_PASSWORD"']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+volumes:
+  mysql-data:
